@@ -13,5 +13,5 @@ def generate_launch_description():
             description="使用 mock_components/GenericSystem 替代真实硬件（dmmotor_hardware_interface/DMMototHardwareInterface）",
         )
     )
-    return ld
+    return ld111
 #草草草草
