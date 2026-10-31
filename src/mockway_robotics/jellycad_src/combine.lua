@@ -1,0 +1,193 @@
+--[[
+Copyright (c) 2025. Li Jianbin. All rights reserved.
+MIT License
+JellyCAD version v0.3.10
+Mockway Structure Assembly Model File
+--]]
+local base = require('base')
+local shell = require('shell')
+local flank = require('flank')
+local linkage = require('linkage')
+local elbow = require('elbow')
+local tail = require('tail')
+local lid = require('lid')
+local config = require('config')
+
+local motor4310 = cylinder.new(config.r_motor * 1e-3, 45 * 1e-3):color('black')
+local motor4340 = cylinder.new(config.r_motor * 1e-3, 52.25 * 1e-3):color('black')
+local m_base = base.m:copy()
+local m_flank = flank.m:copy()
+local m_shell = shell.m:copy()
+local m1_linkage = linkage.m1:copy()
+local m2_linkage = linkage.m2:copy()
+local m_elbow = elbow.m:copy()
+local m_tail = tail.m:copy()
+local m_lid = lid.m:copy()
+
+-- 设置各个部件的质量
+motor4310:mass(295 * 1e-3)
+motor4340:mass(360 * 1e-3)
+m_base:mass(78 * 1e-3)
+m_flank:mass((12 + 4 + 3) * 1e-3)
+m_shell:mass((55 + 2) * 1e-3)
+m1_linkage:mass((70.5 + 10) * 1e-3)
+m2_linkage:mass((57.8 + 10) * 1e-3)
+m_elbow:mass((41.8) * 1e-3)
+m_tail:mass((15.8) * 1e-3)
+m_lid:mass((7) * 1e-3)
+-- 【基座】
+local base_link = {}
+base_link[1] = m_base:copy()
+base_link[2] = m_flank:copy():z((config.h_base - config.h_flank) * 1e-3)
+for i = 1, #base_link do
+    base_link[i]:color('#6495ED')
+end
+-- 公用参数
+local h0_shoulder = config.h_base + config.h_flank_reserve + config.r_outer
+local h1_shoulder = h0_shoulder + 2 * config.r_outer + config.h_upper_arm
+local w0_wrist = 2 * config.r_outer + config.h_flank_sum - config.thickness + config.h_motor_convex
+local w1_wrist = h1_shoulder + 3 * config.r_outer + config.h_fore_arm + config.thickness + config.h_flank_reserve +
+    config.h_motor_convex
+-- 【肩部】
+local shoulder = {}
+shoulder[1] = m_shell:copy():z((config.h_base + config.h_flank_reserve) * 1e-3)
+    :rz(-90):color('#8470FF')
+shoulder[2] = motor4310:copy():z((config.h_base + config.h_flank_reserve + config.thickness) * 1e-3)
+shoulder[3] = m_flank:copy():rot(90, 0, 0):y((-config.r_outer) * 1e-3)
+    :z((h0_shoulder) * 1e-3):color('#8470FF')
+shoulder[4] = m_lid:copy():z((config.h_base + config.h_flank_reserve + 2 * config.r_outer) * 1e-3):color('#8470FF')
+-- 【上臂】
+local upperarm = {}
+upperarm[1] = m_shell:copy():rot(180, -90, -90)
+    :y(-(config.r_outer + config.h_flank + config.h_flank_reserve) * 1e-3)
+    :z((h0_shoulder) * 1e-3):color('#31C5C5')
+-- J2关节电机
+upperarm[2] = motor4340:copy():rot(180, -90, -90)
+    :y(-(config.r_outer + config.h_flank + config.h_flank_reserve + config.thickness) * 1e-3)
+    :z((h0_shoulder) * 1e-3)
+upperarm[3] = m_shell:copy():rot(0, 90, -90)
+    :y(-(config.r_outer + config.h_flank + config.h_flank_reserve) * 1e-3)
+    :z((h1_shoulder) * 1e-3):color('#31C5C5')
+-- J3关节电机
+upperarm[4] = motor4340:copy():rot(0, 90, -90)
+    :y(-(config.r_outer + config.h_flank + config.h_flank_reserve + config.thickness) * 1e-3)
+    :z((h1_shoulder) * 1e-3)
+upperarm[5] = m1_linkage:copy()
+    :y(-(2 * config.r_outer + config.h_flank + config.h_flank_reserve) * 1e-3)
+    :z((h0_shoulder + config.r_outer) * 1e-3):color('#31C5C5')
+upperarm[6] = m_lid:copy():rot(90, 0, 0)
+    :y(-(config.r_outer + config.h_flank + config.h_flank_reserve + 2 * config.r_outer) * 1e-3)
+    :z((h0_shoulder) * 1e-3):color('#31C5C5')
+upperarm[4] = m_lid:copy():rot(90, 0, 0)
+    :y(-(config.r_outer + config.h_flank + config.h_flank_reserve + 2 * config.r_outer) * 1e-3)
+    :z((h1_shoulder) * 1e-3):color('#31C5C5')
+-- 【前臂】
+local forearm = {}
+forearm[1] = m_flank:copy():rot(90, 0, 0)
+    :y(-(config.r_outer) * 1e-3)
+    :z((h1_shoulder) * 1e-3)
+    :color('#FF7F50')
+forearm[2] = m_elbow:copy():rot(0, -90, -90)
+    :y(-(config.r_outer + config.h_flank) * 1e-3)
+    :z((h1_shoulder) * 1e-3)
+    :color('#FF7F50')
+forearm[3] = m2_linkage:copy()
+    :z((h1_shoulder + config.r_outer) * 1e-3)
+    :color('#FF7F50')
+forearm[4] = m_shell:copy():rot(0, 90, 90)
+    :y(-(config.r_outer) * 1e-3)
+    :z((h1_shoulder + 2 * config.r_outer + config.h_fore_arm) * 1e-3)
+    :color('#FF7F50')
+forearm[5] = motor4310:copy():rot(0, 90, 90)
+    :y(-(config.r_outer - config.thickness) * 1e-3)
+    :z((h1_shoulder + 2 * config.r_outer + config.h_fore_arm) * 1e-3)
+forearm[6] = m_lid:copy():rot(90, 0, 180)
+    :y(-(config.r_outer - 2 * config.r_outer) * 1e-3)
+    :z((h1_shoulder + 2 * config.r_outer + config.h_fore_arm) * 1e-3)
+    :color('#FF7F50')
+
+-- 【手腕1】
+local wrist1 = {}
+wrist1[1] = m_shell:copy():rot(0, 180, -90)
+    :y(-(w0_wrist) * 1e-3)
+    :z((h1_shoulder + 3 * config.r_outer + config.h_fore_arm) * 1e-3)
+    :color('#DA70D6')
+wrist1[2] = motor4310:copy():rot(0, 180, -90)
+    :y(-(w0_wrist) * 1e-3)
+    :z((h1_shoulder + 3 * config.r_outer + config.h_fore_arm - config.thickness) * 1e-3)
+wrist1[3] = m_flank:copy():rot(-90, 0, 0)
+    :y(-(config.r_outer + config.h_flank_sum - config.thickness + config.h_motor_convex) * 1e-3)
+    :z((h1_shoulder + 2 * config.r_outer + config.h_fore_arm) * 1e-3)
+    :color('#DA70D6')
+wrist1[4] = m_lid:copy():rot(180, 0, 0)
+    :y(-(w0_wrist) * 1e-3)
+    :z((h1_shoulder + 3 * config.r_outer + config.h_fore_arm - 2 * config.r_outer) * 1e-3)
+    :color('#DA70D6')
+
+-- 【手腕2】
+local wrist2 = {}
+wrist2[1] = m_shell:copy():rot(0, 90, 90)
+    :y(-(w0_wrist + config.r_outer) * 1e-3)
+    :z((w1_wrist + config.r_outer) * 1e-3)
+    :color('#4682B4')
+wrist2[2] = motor4310:copy():rot(0, 90, 90)
+    :y(-(w0_wrist + config.r_outer - config.thickness) * 1e-3)
+    :z((w1_wrist + config.r_outer) * 1e-3)
+wrist2[3] = m_flank:copy():rot(180, 0, 0)
+    :y(-(w0_wrist) * 1e-3)
+    :z((w1_wrist) * 1e-3)
+    :color('#4682B4')
+wrist2[4] = m_lid:copy():rot(90, 0, 180)
+    :y(-(w0_wrist + config.r_outer - 2 * config.r_outer) * 1e-3)
+    :z((w1_wrist + config.r_outer) * 1e-3)
+    :color('#4682B4')
+
+local wrist3 = {}
+wrist3[1] = m_tail:copy():rot(0, 90, 90)
+    :y(-(w0_wrist + config.r_outer + config.h_tail + config.h_motor_convex) * 1e-3)
+    :z((w1_wrist + config.r_outer) * 1e-3)
+    :color('gray')
+
+-- 基座底部到J2轴的距离
+local d1 = (h0_shoulder) * 1e-3
+-- J2轴到J3轴的距离
+local a2 = (2 * config.r_outer + config.h_upper_arm) * 1e-3
+local a3 = (2 * config.r_outer + config.h_fore_arm) * 1e-3
+local d4 = (2 * config.r_outer + config.h_flank_sum - config.thickness + config.h_motor_convex) * 1e-3
+local d5 = (2 * config.r_outer + config.h_flank_sum - config.thickness + config.h_motor_convex) * 1e-3
+local d6 = (config.r_outer + config.h_tail_sum - config.thickness + config.h_motor_convex) * 1e-3
+
+local joint_axes = {}
+joint_axes[1] = axes.new({ 0, 0, d1, 0, 0, 0 }, 0.1)
+joint_axes[2] = joint_axes[1]:copy():move({ 0, 0, 0, 90, 0, 0 })
+joint_axes[3] = joint_axes[2]:copy():move({ 0, a2, 0, 0, 0, 0 })
+joint_axes[4] = joint_axes[3]:copy():move({ 0, a3, 0, 0, 0, 0 })
+joint_axes[5] = joint_axes[4]:copy():move({ 0, 0, d4, -90, 0, 0 })
+joint_axes[6] = joint_axes[5]:copy():move({ 0, -d6, d5, 90, 0, 0 })
+
+for _, arr in ipairs({ joint_axes, base_link, shoulder, upperarm, forearm, wrist1, wrist2, wrist3 }) do
+    for _, value in ipairs(arr) do
+        value:show()
+    end
+end
+
+local j1_limit = { lower = -6.28, upper = 6.28, velocity = 3.14, effort = 9 }
+local j2_limit = { lower = -6.28, upper = 6.28, velocity = 3.14, effort = 9 }
+local j3_limit = { lower = -3.14, upper = 3.14, velocity = 3.14, effort = 9 }
+local j4_limit = { lower = -6.28, upper = 6.28, velocity = 3.14, effort = 3 }
+local j5_limit = { lower = -6.28, upper = 6.28, velocity = 3.14, effort = 3 }
+local j6_limit = { lower = -6.28, upper = 6.28, velocity = 3.14, effort = 3 }
+local urdf = link.new("base_link", base_link)
+local joint1 = urdf:add(joint.new("joint1", joint_axes[1], "revolute", j1_limit))
+local link1 = joint1:next(link.new("link1", shoulder))
+local joint2 = link1:add(joint.new("joint2", joint_axes[2], "revolute", j2_limit))
+local link2 = joint2:next(link.new("link2", upperarm))
+local joint3 = link2:add(joint.new("joint3", joint_axes[3], "revolute", j3_limit))
+local link3 = joint3:next(link.new("link3", forearm))
+local joint4 = link3:add(joint.new("joint4", joint_axes[4], "revolute", j4_limit))
+local link4 = joint4:next(link.new("link4", wrist1))
+local joint5 = link4:add(joint.new("joint5", joint_axes[5], "revolute", j5_limit))
+local link5 = joint5:next(link.new("link5", wrist2))
+local joint6 = link5:add(joint.new("joint6", joint_axes[6], "revolute", j6_limit))
+local link6 = joint6:next(link.new("link6", wrist3))
+urdf:export({ name = 'mockway_description', path = '../', ros_version = 2 })

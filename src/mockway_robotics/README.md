@@ -1,0 +1,264 @@
+<div align="center">
+  <img src="doc/img/icon.png" alt="Logo" width="128px" align="center" />
+
+  # 牧卫机器人
+
+  开源六轴协作机械臂系统，包含机械结构、电路和软件
+
+</div>
+启动pcan
+sudo modprobe -r peak_usb
+sudo modprobe peak_usb
+ip link show can0
+sudo ip link set can0 type can bitrate 1000000
+sudo ip link set up can0
+ip link show can0
+
+监听
+candump -e can0
+控制帧
+cansend can0 001#FFFFFFFFFFFFFFFC
+cansend can0 002#FFFFFFFFFFFFFFFC
+cansend can0 003#FFFFFFFFFFFFFFFC
+cansend can0 004#FFFFFFFFFFFFFFFC
+cansend can0 005#FFFFFFFFFFFFFFFC
+cansend can0 006#FFFFFFFFFFFFFFFC
+
+cansend can0 001#FFFFFFFFFFFFFFFD
+cansend can0 002#FFFFFFFFFFFFFFFD
+cansend can0 003#FFFFFFFFFFFFFFFD
+cansend can0 004#FFFFFFFFFFFFFFFD
+cansend can0 005#FFFFFFFFFFFFFFFD
+cansend can0 006#FFFFFFFFFFFFFFFD
+
+
+控制电机终端
+cd ~/mockway_ws
+colcon build --symlink-install --packages-select moveit_mockway_config dmmotor_hardware_interface mockway_bringup
+source install/setup.bash
+ros2 launch mockway_bringup bringup.launch.py use_mock_hardware:=false with_rviz:=false with_lua:=false
+另外开电机终端
+source ~/mockway_ws/install/setup.bash
+ros2 control list_hardware_components
+ros2 control list_controllers
+ros2 topic echo /joint_states
+控制电机
+ros2 action send_goal /mockway_group_controller/follow_joint_trajectory control_msgs/action/FollowJointTrajectory "{
+  trajectory: {
+    joint_names: ['joint1','joint2','joint3','joint4','joint5','joint6'],
+    points: [{
+      positions: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      time_from_start: {sec: 2, nanosec: 0}
+    }]
+  }
+}"
+启动 GUI：
+cd ~/mockway_ws/src/mockway_robotics
+python3 tools/motor_gui/motor_gui.py
+
+启动补偿
+cd ~/mockway_ws/src/mockway_robotics/tools/dynamics_test
+source /opt/ros/jazzy/setup.bash
+python3 realtime_torque_compensation.py --demo gravity
+
+启动程序
+ros2 launch moveit_mockway_config demo.launch.py
+```bash
+
+
+# 启动 move_group + servo ,仿真：use_mock_hardware:=true
+ros2 launch moveit_mockway_config demo.launch.py use_mock_hardware:=true #xyy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**中文 | [English](README_EN.md)**
+
+[![robotarm_base](doc/img/cover.jpg)](https://www.bilibili.com/video/BV1AxrbBWEjN/)
+
+> 视频中测试程序为`tools/dynamics_test/real/inverse_dynamics_test.py`脚本
+> 
+> 运行后选择：1-重力补偿模式
+> 
+> 根据实际情况配置`tools/dynamics_test/dynamics_test.yaml`中串口等信息
+
+CAN设备使用[维特USB-CAN模块](https://detail.tmall.com/item.htm?id=598670674373&skuId=4483773298672)，串口波特率921600，CAN总线波特率1M
+
+## ⚙️ 机械结构
+
+使用`JellyCAD`参数化建模，模型参数在`/jellycad_src`目录下，软件下载地址：[JellyCAD v0.3.10](https://github.com/Jelatine/JellyCAD/releases/tag/v0.3.10)
+
+结构件可3D打印，已上传到[MakerWorld](https://makerworld.com.cn/zh/models/2037149-mockway-kai-yuan-liu-zhou-xie-zuo-ji-jie-bi#profileId-2273199)
+
+[![makerworld](doc/img/makerworld.png)](https://makerworld.com.cn/zh/models/2037149-mockway-kai-yuan-liu-zhou-xie-zuo-ji-jie-bi#profileId-2273199)
+
+[组装指南.md](doc/组装指南.md)
+
+## 🚀 程序运行
+
+### 🎮 电机调试
+
+单个电机运动调试和关节零点标定的界面
+
+PCAN 等 SocketCAN 设备先启动 `can0`，界面中选择 `SocketCAN`，接口填 `can0`；维特串口 USB-CAN 仍选择 `维特串口USB-CAN`。
+
+```bash
+pip install -r tools/motor_gui/requirements.txt
+python tools/motor_gui/motor_gui.py
+```
+
+![motor_gui](doc/img/motor_gui.png)
+
+### ⚡ 力矩补偿
+
+```bash
+python tools/dynamics_test/realtime_torque_compensation.py
+```
+
+![torque_compensation](doc/img/torque_compensation.png)
+
+> 运行前请阅读下面 `⚠️ 注意事项`
+
+### 🦾 运行MoveIt!
+
+建议运行环境：
+
+- Ubuntu 24.04
+- ROS2 Jazzy + MoveIt!
+
+1. 创建工作空间
+
+```bash
+mkdir -p ~/mockway_ws/src
+cd ~/mockway_ws/src
+```
+
+2. 克隆mockway_robotics仓库
+
+```bash
+git clone https://github.com/Jelatine/mockway_robotics.git
+```
+
+3. 编译工作空间
+
+```bash
+cd ~/mockway_ws
+rosdep install --from-paths src/mockway_robotics/moveit_mockway_config/ --ignore-src -r -y
+colcon build --symlink-install --packages-select moveit_mockway_config
+colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+```
+4. 配置环境变量
+
+```bash
+source ~/mockway_ws/install/setup.bash
+```
+
+5. 启动程序
+
+```bash
+ros2 launch moveit_mockway_config demo.launch.py
+```
+
+![moveit_demo](doc/img/moveit_demo.png)
+
+### 🖥️ 完整程序
+
+1. 安装`lua`
+
+```bash
+sudo apt install liblua5.4-dev
+```
+
+2. 构建`mockway_bringup`
+
+```bash
+cd ~/mockway_ws
+rosdep install --from-paths src/mockway_robotics/ --ignore-src -r -y
+colcon build --symlink-install --packages-select mockway_bringup
+```
+3. 启动程序
+
+```bash
+# 启动 move_group + servo ,仿真：use_mock_hardware:=true
+ros2 launch moveit_mockway_config demo.launch.py use_mock_hardware:=true #xyy
+
+ros2 launch mockway_bringup bringup.launch.py use_mock_hardware:=true
+# 浏览器打开前端：http://localhost:8080/
+```
+
+### 🦞 OpenClaw应用
+
+[应用视频](https://www.bilibili.com/video/BV1hnAjz9ESU/)
+
+1. 将[skill](mockway_lua_moveit\robot_skill.md)文件放到openclaw的workspace目录下
+2. 对话时让大模型学习skill文件中的指令，以及机械臂控制器的IP地址(或主机名)
+3. 用自然语言控制机械臂，如：直线向上移动10厘米
+
+## 📦 物料清单
+
+详细的物料清单请查看：[BOM.md](doc/BOM.md)
+
+复刻成本约4.2k（电机≈4k，打印件≈20，USB2CAN≈73，电源≈100，螺丝及工具<40）
+
+## 🔌 电气连接
+
+![electrical_topology](doc/img/electrical_topology.png)
+
+## ⚠️ 注意事项
+
+**重要提示：力矩模式如果前期准备没做好容易发生飞车（失控）现象，请务必按照以下步骤操作。**
+
+### 1. 结构匹配
+
+确保机械结构与URDF模型一致。GitHub仓库最新版本已包含所有必需的结构件。
+
+### 2. 关节零点标定
+
+使用电机调试界面标定各关节零点位置，零点姿态需参考URDF定义。
+
+```bash
+pip install -r tools/motor_gui/requirements.txt
+python tools/motor_gui/motor_gui.py
+```
+
+<img src="doc/img/calibrate_joint.jpg" alt="calibrate_joint" style="zoom: 50%;" />
+
+### 3. 力矩值验证
+
+在代码中注释掉`controller.enable_motors()`，先运行程序观察计算的力矩值是否正常。有条件的话，建议先运行一次位置模式，对比实际力矩与算法计算力矩的差异是否较小。
+
+### 4. 重力补偿测试
+
+初次测试时：
+- 使用模式1（重力补偿模式）进行测试
+- 增加电机阻尼参数：设置`mit_params.kd = 1`
+
+### 5. 结构件打印
+
+3D打印结构件时注意：
+- 提高填充百分比（建议≥40%）
+- 使用螺旋体（Gyroid）填充图案，以提高强度和减轻重量

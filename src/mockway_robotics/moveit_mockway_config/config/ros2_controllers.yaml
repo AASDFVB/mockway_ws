@@ -1,0 +1,48 @@
+# This config file is used by ros2_control
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    mockway_group_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+mockway_group_controller:
+  ros__parameters:
+    joints:
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+      - joint5
+      - joint6
+    command_interfaces:
+      - position
+      # - velocity
+    state_interfaces:
+      - position
+      - velocity
+    allow_nonzero_velocity_at_trajectory_end: true
+    open_loop_control: true
+
+    # # 目标容差配置 - 解决电机编码器误差导致的超时问题
+    # constraints:
+    #   stopped_velocity_tolerance: 0.1      # 停止时的速度容差 (rad/s)
+    #   goal_time: 2.0                       # 允许额外2秒到达目标
+
+    #   # 各关节的目标位置容差 (rad)
+    #   joint1:
+    #     goal: 0.05    # 约2.9度
+    #   joint2:
+    #     goal: 0.05
+    #   joint3:
+    #     goal: 0.05
+    #   joint4:
+    #     goal: 0.05
+    #   joint5:
+    #     goal: 0.05
+    #   joint6:
+    #     goal: 0.05
